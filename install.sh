@@ -13,15 +13,14 @@
 #   ./install.sh --copy                # copy instead of symlink (for machines that
 #                                      #   won't keep this repo cloned)
 #
-# Agent skill paths (verified 2026-05):
-#   Claude Code : ~/.claude/skills      (also read by opencode)
-#   opencode    : ~/.claude/skills      ← covered by the Claude target, no separate entry
-#   Codex CLI   : ~/.codex/skills       (CODEX_HOME/skills)
+# Agent skill paths (verified 2026-05 against this machine's lark-cli footprint —
+# the lark skills installer populates exactly these three, so we match it):
+#   ~/.claude/skills   Claude Code (also read by opencode natively)
+#   ~/.codex/skills    Codex CLI (CODEX_HOME/skills)
+#   ~/.agents/skills   cross-agent standard dir (Codex/opencode both honor it)
 #
-# If your Codex build uses the newer cross-standard ~/.agents/skills instead,
-# add it to AGENT_DIRS below. (Don't ALSO add ~/.agents/skills for opencode's sake —
-# opencode already sees the skill via ~/.claude/skills, and a second copy would make
-# it list the skill twice.)
+# Agents dedupe skills by `name`, so a skill appearing in more than one of these
+# dirs is listed once, not multiple times.
 
 set -euo pipefail
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -33,7 +32,7 @@ SKILLS_SRC="$REPO_DIR/skills"
 AGENT_DIRS=(
   "$HOME/.claude/skills"   # Claude Code + opencode
   "$HOME/.codex/skills"    # Codex CLI
-  # "$HOME/.agents/skills" # uncomment if your Codex uses the .agents/skills convention
+  "$HOME/.agents/skills"   # cross-agent standard dir
 )
 
 MODE="link"

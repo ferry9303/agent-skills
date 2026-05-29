@@ -30,14 +30,18 @@ machines where you won't keep the clone around.
 
 ### Where each agent looks
 
-| Agent | Skills directory | Notes |
-|---|---|---|
-| Claude Code | `~/.claude/skills/` | |
-| opencode | `~/.claude/skills/` | reads Claude's dir natively — covered by the same symlink |
-| Codex CLI | `~/.codex/skills/` | restart Codex after installing; some builds use `~/.agents/skills/` |
+`install.sh` symlinks each skill into all three of these (whichever exist):
 
-`install.sh` only writes into an agent's directory if that agent is actually
-installed (its home dir exists), so it won't litter folders for tools you don't use.
+| Directory | Used by |
+|---|---|
+| `~/.claude/skills/` | Claude Code (and opencode, which reads it natively) |
+| `~/.codex/skills/` | Codex CLI — restart Codex after installing to reload metadata |
+| `~/.agents/skills/` | the cross-agent standard dir several tools honor |
+
+These overlap on purpose — it's the same footprint the `lark-cli` skills installer
+uses. Agents dedupe by skill `name`, so a skill in more than one dir is listed once.
+`install.sh` only writes into a directory whose parent (the agent's home) already
+exists, so it won't create folders for tools you don't have.
 
 ## Using a skill in an arbitrary agent
 
