@@ -1,0 +1,10 @@
+# backups created by install.sh
+*.bak.*
+
+# macOS
+.DS_Store
+
+# never commit secrets
+*.env
+.env
+.env.*

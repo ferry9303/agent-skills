@@ -1,0 +1,225 @@
+name: Feishu Notify
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    types: [opened, closed, reopened, ready_for_review]
+  pull_request_review:
+    types: [submitted]
+  pull_request_review_comment:
+    types: [created]
+  issues:
+    types: [opened, closed, reopened]
+  issue_comment:
+    types: [created]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Build & send Feishu card
+        env:
+          WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          SIGN_SECRET: ${{ secrets.FEISHU_SIGN_SECRET }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action }}
+          REPO: ${{ github.repository }}
+          ACTOR: ${{ github.actor }}
+          REF: ${{ github.ref }}
+        run: |
+          python3 - <<'PY'
+          import os, sys, json, time, hmac, hashlib, base64, urllib.request
+
+          # ---------- Bail out early if not configured ----------
+          # Lets the workflow ship to a repo without admin secrets configured;
+          # CI stays green, repo admin can enable later by setting the secrets.
+          if not os.environ.get("WEBHOOK_URL"):
+              print("FEISHU_WEBHOOK_URL not set — skipping notification.")
+              print("Repo admin: add FEISHU_WEBHOOK_URL (and optionally "
+                    "FEISHU_SIGN_SECRET) under Settings → Secrets and variables "
+                    "→ Actions to enable.")
+              sys.exit(0)
+
+          ev_name   = os.environ["EVENT_NAME"]
+          ev_action = os.environ.get("EVENT_ACTION") or ""
+          repo      = os.environ["REPO"]
+          actor     = os.environ["ACTOR"]
+          with open(os.environ["GITHUB_EVENT_PATH"]) as f:
+              ev = json.load(f)
+
+          # ---------- Noise filter ----------
+          def should_skip():
+              if actor.endswith("[bot]") or actor in {"dependabot", "renovate", "github-actions"}:
+                  return "bot actor"
+              if ev_name == "push" and not ev.get("commits"):
+                  return "empty push (branch delete / tag-only)"
+              if ev_name == "pull_request" and ev_action == "opened" \
+                      and ev.get("pull_request", {}).get("draft"):
+                  return "draft PR"
+              return None
+
+          skip_reason = should_skip()
+          if skip_reason:
+              print(f"Skipped: {skip_reason}")
+              sys.exit(0)
+
+          # ---------- Helpers ----------
+          def quote(s, limit=200):
+              """Trim body text and prefix with grey marker."""
+              s = (s or "").strip().replace("\r", "")
+              if not s:
+                  return ""
+              if len(s) > limit:
+                  s = s[:limit].rstrip() + "…"
+              # lark_md has no blockquote; use grey font for visual contrast
+              return f"<font color='grey'>{s}</font>"
+
+          def div(md):
+              return {"tag": "div", "text": {"tag": "lark_md", "content": md}}
+
+          def btn(text, url, style="default"):
+              return {
+                  "tag": "button",
+                  "text": {"tag": "plain_text", "content": text},
+                  "url": url,
+                  "type": style,
+              }
+
+          # ---------- Build per event ----------
+          title = ""
+          template = "blue"
+          elements = []
+          buttons = []
+
+          if ev_name == "push":
+              ref = os.environ["REF"].replace("refs/heads/", "")
+              commits = ev["commits"]
+              n = len(commits)
+              title = f"🚀 {actor} → {ref}  ({n} commit{'s' if n != 1 else ''})"
+              template = "green"
+
+              elements.append(div(f"**{repo}**"))
+
+              lines = []
+              for c in commits[:5]:
+                  msg = c["message"].splitlines()[0]
+                  if len(msg) > 80:
+                      msg = msg[:80] + "…"
+                  lines.append(f"• [`{c['id'][:7]}`]({c['url']}) {msg}")
+              if n > 5:
+                  lines.append(f"… and {n - 5} more")
+              elements.append(div("\n".join(lines)))
+
+              if ev.get("compare"):
+                  buttons.append(btn("查看 diff", ev["compare"], "primary"))
+
+          elif ev_name == "pull_request":
+              pr = ev["pull_request"]
+              num = pr["number"]
+              merged = ev_action == "closed" and pr.get("merged")
+              emoji, template, verb = {
+                  "opened":          ("🔀", "blue",   "opened"),
+                  "reopened":        ("🔄", "orange", "reopened"),
+                  "ready_for_review":("👀", "blue",   "ready for review"),
+                  "closed":          ("🚫", "grey",   "closed"),
+              }.get(ev_action, ("🔀", "blue", ev_action))
+              if merged:
+                  emoji, template, verb = "💜", "purple", "merged"
+
+              title = f"{emoji} PR #{num} {verb}: {pr['title']}"
+              elements.append(div(
+                  f"**{repo}** · @{pr['user']['login']} · "
+                  f"`{pr['head']['ref']}` → `{pr['base']['ref']}`"
+              ))
+              if ev_action == "opened":
+                  body = quote(pr.get("body"))
+                  if body:
+                      elements.append(div(body))
+              buttons.append(btn("Open PR", pr["html_url"], "primary"))
+
+          elif ev_name == "pull_request_review":
+              pr, rv = ev["pull_request"], ev["review"]
+              emoji, template, verb = {
+                  "approved":          ("✅", "green", "approved"),
+                  "changes_requested": ("❌", "red",   "requested changes on"),
+                  "commented":         ("💬", "blue",  "commented on"),
+              }.get(rv["state"], ("💬", "blue", "reviewed"))
+
+              title = f"{emoji} @{rv['user']['login']} {verb} PR #{pr['number']}"
+              elements.append(div(f"**{repo}** · *{pr['title']}*"))
+              body = quote(rv.get("body"))
+              if body:
+                  elements.append(div(body))
+              buttons.append(btn("Open review", rv["html_url"], "primary"))
+
+          elif ev_name in ("issue_comment", "pull_request_review_comment"):
+              c = ev["comment"]
+              if ev_name == "issue_comment":
+                  target = ev["issue"]
+                  kind = "PR" if "pull_request" in target else "Issue"
+              else:
+                  target = ev["pull_request"]
+                  kind = "PR"
+              template = "turquoise"
+              title = f"💬 @{c['user']['login']} commented on {kind} #{target['number']}"
+              elements.append(div(f"**{repo}** · *{target['title']}*"))
+              body = quote(c.get("body"))
+              if body:
+                  elements.append(div(body))
+              buttons.append(btn("Open comment", c["html_url"], "primary"))
+
+          elif ev_name == "issues":
+              iss = ev["issue"]
+              emoji, template = {
+                  "opened":   ("🐛", "orange"),
+                  "closed":   ("✔️", "grey"),
+                  "reopened": ("🔄", "orange"),
+              }.get(ev_action, ("📋", "blue"))
+
+              title = f"{emoji} Issue #{iss['number']} {ev_action}: {iss['title']}"
+              elements.append(div(f"**{repo}** · @{iss['user']['login']}"))
+              if ev_action == "opened":
+                  body = quote(iss.get("body"))
+                  if body:
+                      elements.append(div(body))
+              buttons.append(btn("Open issue", iss["html_url"], "primary"))
+
+          else:
+              title = f"📢 {ev_name} {ev_action}".strip()
+              elements.append(div(f"**{repo}** · @{actor}"))
+
+          if buttons:
+              elements.append({"tag": "action", "actions": buttons})
+
+          card = {
+              "msg_type": "interactive",
+              "card": {
+                  "config": {"wide_screen_mode": True},
+                  "header": {
+                      "title": {"tag": "plain_text", "content": title[:150]},
+                      "template": template,
+                  },
+                  "elements": elements,
+              },
+          }
+
+          payload = card
+          if os.environ.get("SIGN_SECRET"):
+              ts = str(int(time.time()))
+              sign = base64.b64encode(
+                  hmac.new(
+                      f"{ts}\n{os.environ['SIGN_SECRET']}".encode(),
+                      digestmod=hashlib.sha256,
+                  ).digest()
+              ).decode()
+              payload = {"timestamp": ts, "sign": sign, **card}
+
+          req = urllib.request.Request(
+              os.environ["WEBHOOK_URL"],
+              data=json.dumps(payload).encode(),
+              headers={"Content-Type": "application/json"},
+          )
+          with urllib.request.urlopen(req, timeout=10) as r:
+              print(r.status, r.read().decode())
+          PY
