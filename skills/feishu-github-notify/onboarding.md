@@ -9,7 +9,7 @@
 ## 是什么 / 解决什么
 
 - GitHub 仓库的活动会自动以飞书卡片形式推到指定群
-- 每张卡片带 emoji 区分事件类型（🚀 push / 🔀 PR / ✅ approved / 💜 merged / 🐛 issue / 💬 comment）
+- 每张卡片带 emoji 区分事件类型（🚀 push / 🗑️ 删分支 / 🔀 PR / ✅ approved / 💜 merged / 🐛 issue / 💬 comment）
 - 每张卡片底部有跳转按钮，手机上一点就跳到 GitHub
 - bot 用户、空 push、draft PR 自动过滤，不刷屏
 - **未配置 secret 时 workflow 安静 skip**，可以放心装到团队仓库不污染 CI

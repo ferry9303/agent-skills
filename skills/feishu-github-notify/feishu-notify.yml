@@ -52,8 +52,10 @@ jobs:
           def should_skip():
               if actor.endswith("[bot]") or actor in {"dependabot", "renovate", "github-actions"}:
                   return "bot actor"
-              if ev_name == "push" and not ev.get("commits"):
-                  return "empty push (branch delete / tag-only)"
+              # branch delete (`git push origin :xxx`) has no commits but
+              # deleted=True — let it through so it gets its own 🗑️ card below.
+              if ev_name == "push" and not ev.get("commits") and not ev.get("deleted"):
+                  return "empty push (no new commits, e.g. branch create / tag-only)"
               if ev_name == "pull_request" and ev_action == "opened" \
                       and ev.get("pull_request", {}).get("draft"):
                   return "draft PR"
@@ -94,25 +96,39 @@ jobs:
 
           if ev_name == "push":
               ref = os.environ["REF"].replace("refs/heads/", "")
-              commits = ev["commits"]
-              n = len(commits)
-              title = f"🚀 {actor} → {ref}  ({n} commit{'s' if n != 1 else ''})"
-              template = "green"
 
-              elements.append(div(f"**{repo}**"))
+              if ev.get("deleted"):
+                  # `git push origin :xxx` — remote branch removed
+                  before = ev.get("before") or ""
+                  title = f"🗑️ {actor} deleted branch {ref}"
+                  template = "red"
+                  elements.append(div(f"**{repo}**"))
+                  if before and set(before) != {"0"}:
+                      commit_url = f"https://github.com/{repo}/commit/{before}"
+                      elements.append(div(
+                          f"删除前最后提交：[`{before[:7]}`]({commit_url})"
+                      ))
+                      buttons.append(btn("查看删除前提交", commit_url, "primary"))
+              else:
+                  commits = ev["commits"]
+                  n = len(commits)
+                  title = f"🚀 {actor} → {ref}  ({n} commit{'s' if n != 1 else ''})"
+                  template = "green"
 
-              lines = []
-              for c in commits[:5]:
-                  msg = c["message"].splitlines()[0]
-                  if len(msg) > 80:
-                      msg = msg[:80] + "…"
-                  lines.append(f"• [`{c['id'][:7]}`]({c['url']}) {msg}")
-              if n > 5:
-                  lines.append(f"… and {n - 5} more")
-              elements.append(div("\n".join(lines)))
+                  elements.append(div(f"**{repo}**"))
 
-              if ev.get("compare"):
-                  buttons.append(btn("查看 diff", ev["compare"], "primary"))
+                  lines = []
+                  for c in commits[:5]:
+                      msg = c["message"].splitlines()[0]
+                      if len(msg) > 80:
+                          msg = msg[:80] + "…"
+                      lines.append(f"• [`{c['id'][:7]}`]({c['url']}) {msg}")
+                  if n > 5:
+                      lines.append(f"… and {n - 5} more")
+                  elements.append(div("\n".join(lines)))
+
+                  if ev.get("compare"):
+                      buttons.append(btn("查看 diff", ev["compare"], "primary"))
 
           elif ev_name == "pull_request":
               pr = ev["pull_request"]

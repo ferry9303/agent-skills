@@ -147,8 +147,8 @@ gh run view <run-id> --repo <owner>/<repo> --log-failed   # 失败时
 `feishu-notify.yml` 已包含：
 
 - 监听事件：`push` / `pull_request` (opened, closed, reopened, ready_for_review) / `pull_request_review` (submitted) / `pull_request_review_comment` (created) / `issues` (opened, closed, reopened) / `issue_comment` (created)
-- 卡片风格：紧凑 + emoji（🚀 push / 🔀 PR / ✅ approved / ❌ changes / 💜 merged / 🐛 issue / 💬 comment）+ 跳转按钮
-- 噪音过滤：bot user（`[bot]` 后缀、dependabot、renovate、github-actions）、空 push（删分支）、draft PR opened 全部跳过
+- 卡片风格：紧凑 + emoji（🚀 push / 🗑️ delete branch / 🔀 PR / ✅ approved / ❌ changes / 💜 merged / 🐛 issue / 💬 comment）+ 跳转按钮
+- 噪音过滤：bot user（`[bot]` 后缀、dependabot、renovate、github-actions）、空 push（无新 commit，如创建分支 / tag）、draft PR opened 全部跳过。**删除分支（`git push origin :xxx`）不算空 push，会单独发 🗑️ 通知**
 - Body 预览：PR / Issue / Comment 正文截前 200 字、灰色显示
 - 签名可选：没设 `FEISHU_SIGN_SECRET` 也能工作（机器人关了签名校验的场景）
 - **未配置时自动 skip**：检测到 `FEISHU_WEBHOOK_URL` 为空，`sys.exit(0)` 直接 success 退出 —— 这是协作模式（admin=false）的关键，避免污染团队 CI

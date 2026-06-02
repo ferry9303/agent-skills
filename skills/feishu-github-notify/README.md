@@ -100,6 +100,7 @@ gh repo list ferry9303 --no-archived --source --limit 200 \
 | 事件 | Emoji | 颜色 | 触发条件 |
 |---|---|---|---|
 | push | 🚀 | green | 任何分支收到 push 且有 commit |
+| branch deleted | 🗑️ | red | `git push origin :xxx` 删除远程分支 |
 | PR opened | 🔀 | blue | 新建非 draft PR |
 | PR ready_for_review | 👀 | blue | draft → ready |
 | PR reopened | 🔄 | orange | 重开 |
@@ -122,7 +123,7 @@ gh repo list ferry9303 --no-archived --source --limit 200 \
 下面这些事件不会发通知（设计如此）：
 
 - **Bot 用户的动作**：用户名以 `[bot]` 结尾，或者是 `dependabot` / `renovate` / `github-actions`
-- **空 push**：删除分支、tag-only push，没有任何 commit 时
+- **空 push**：创建分支无新 commit、tag-only push，没有任何 commit 时（注：**删除分支不再算空 push**，会单独发 🗑️ 通知）
 - **Draft PR 的 opened**：草稿 PR 太早期，等转 ready 再通知
 
 要改这些过滤规则，编辑 `~/.claude/skills/feishu-github-notify/feishu-notify.yml` 里的 `should_skip()` 函数。
