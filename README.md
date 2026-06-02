@@ -16,6 +16,25 @@ The format is universal; only the **install location** differs per agent. The
 
 ## Install
 
+### Option A — `npx skills add` (no clone needed)
+
+The cross-agent [`skills` CLI](https://github.com/vercel-labs/skills) pulls skills
+straight from this repo into whichever agents you have installed — nothing to clone:
+
+```bash
+npx skills add ferry9303/agent-skills                              # all skills, pick agents interactively
+npx skills add ferry9303/agent-skills --skill feishu-github-notify # just one skill
+npx skills add ferry9303/agent-skills --list                       # see what's in the repo first
+npx skills add ferry9303/agent-skills -g -a claude-code -a codex   # global install, Claude Code + Codex
+```
+
+By default it installs into the current project (`./.claude/skills/` …); pass `-g`
+to install globally under your home dir (matching `install.sh`'s footprint), and
+`--copy` if your filesystem doesn't support symlinks. Run `npx skills update` later
+to pull newer versions.
+
+### Option B — clone + `install.sh` (for editing the skills yourself)
+
 ```bash
 git clone git@github.com:ferry9303/agent-skills.git ~/Project/agent-skills
 cd ~/Project/agent-skills

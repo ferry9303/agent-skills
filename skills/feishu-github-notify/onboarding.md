@@ -29,7 +29,7 @@
 | GitHub 账号 | 个人账号或 Org 都行 |
 | AI agent | Claude Code / Codex CLI / opencode 任一即可 |
 | `gh` CLI | `brew install gh && gh auth login` |
-| `git` | clone skill 仓库用 |
+| `git` | 推送 workflow 用（方式 B 还要 clone 仓库） |
 
 ---
 
@@ -37,7 +37,20 @@
 
 ### Step 1. 安装 skill（跨 agent，一次搞定）
 
-skill 托管在公开仓库 [`ferry9303/agent-skills`](https://github.com/ferry9303/agent-skills)，clone 下来跑一次安装脚本即可：
+skill 托管在公开仓库 [`ferry9303/agent-skills`](https://github.com/ferry9303/agent-skills)。两种装法任选其一：
+
+**方式 A · `npx skills add`（最快，不用 clone）**
+
+跨 agent 的 [`skills` CLI](https://github.com/vercel-labs/skills) 直接从仓库拉取，装进你已有的 agent：
+
+```bash
+npx skills add ferry9303/agent-skills --skill feishu-github-notify -g
+```
+
+> `-g` 全局安装（所有项目可用）；去掉 `-g` 则只装到当前项目目录。
+> 想指定 agent：加 `-a claude-code -a codex`。以后用 `npx skills update` 拉新版。
+
+**方式 B · clone + `install.sh`（想自己改 skill 时用）**
 
 ```bash
 git clone https://github.com/ferry9303/agent-skills.git ~/Project/agent-skills
@@ -45,7 +58,7 @@ cd ~/Project/agent-skills
 ./install.sh feishu-github-notify     # 或 ./install.sh 安装全部 skill
 ```
 
-`install.sh` 会把 skill **软链接**到你已安装的各个 agent 的 skills 目录：
+两种方式默认都把 skill **软链接**到你已安装的各个 agent 的 skills 目录：
 
 | 目录 | 谁会读 |
 |---|---|
@@ -53,8 +66,8 @@ cd ~/Project/agent-skills
 | `~/.codex/skills/` | Codex CLI（装完**重启 Codex** 让它重新加载） |
 | `~/.agents/skills/` | 跨 agent 标准目录 |
 
-> 软链接的好处：以后 `git pull` 更新仓库，所有 agent 自动拿到新版，不用重装。
-> 想直接拷贝而不是软链接（比如不打算长期保留这个 clone），用 `./install.sh --copy`。
+> 软链接的好处：以后更新仓库（`npx skills update` 或 `git pull`），所有 agent 自动拿到新版，不用重装。
+> 想直接拷贝而不是软链接，加 `--copy`（A、B 两种都支持）。
 
 **不想装 skill / 用的是 Cursor 等不支持 skill 的工具？** 也行 —— 直接把仓库里 `skills/feishu-github-notify/SKILL.md` 的内容贴给你的 agent，它是纯 Markdown 操作指南，没有 agent 专属假设。
 
@@ -145,4 +158,4 @@ gh repo list myname --no-archived --source --limit 200 \
 
 ## 一句话总结
 
-> clone + install.sh 装 skill → 创建机器人 → 跟 agent 说一句话 → 飞书群开始收到通知。
+> `npx skills add` 装 skill → 创建机器人 → 跟 agent 说一句话 → 飞书群开始收到通知。

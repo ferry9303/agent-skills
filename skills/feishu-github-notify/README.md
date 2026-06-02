@@ -2,6 +2,9 @@
 
 一份给自己看的上手手册。配合 `feishu-github-notify` skill 用，给任何 GitHub 仓库 5 分钟接好飞书机器人通知。
 
+> 还没装 skill？一行搞定：`npx skills add ferry9303/agent-skills --skill feishu-github-notify -g`
+> （其他装法见仓库根 `README.md` 或 `onboarding.md` 的"安装两种方式"）
+
 ---
 
 ## 1. 一次性准备
