@@ -13,6 +13,7 @@ The format is universal; only the **install location** differs per agent. The
 | Skill | What it does |
 |---|---|
 | [feishu-github-notify](skills/feishu-github-notify/) | Wire a GitHub repo's push / PR / review / comment / issue events to a Feishu (Lark) group bot via GitHub Actions |
+| [feishu-gitlab-notify](skills/feishu-gitlab-notify/) | Wire a GitLab project's push / MR / comment / issue / tag events to a Feishu (Lark) group bot via a small Cloudflare Worker relay (GitLab counterpart of the above) |
 
 ## Install
 
