@@ -12,6 +12,7 @@ The format is universal; only the **install location** differs per agent. The
 
 | Skill | What it does |
 |---|---|
+| [apple-notes](skills/apple-notes/) | Read / search / write the macOS Notes app (备忘录), including extracting a note's image attachments to files so the agent can actually see (OCR / describe) them — text-only skills stop at placeholders. macOS only |
 | [feishu-github-notify](skills/feishu-github-notify/) | Wire a GitHub repo's push / PR / review / comment / issue events to a Feishu (Lark) group bot via GitHub Actions |
 | [feishu-gitlab-notify](skills/feishu-gitlab-notify/) | Wire a GitLab project's push / MR / comment / issue / tag events to a Feishu (Lark) group bot via a small Cloudflare Worker relay (GitLab counterpart of the above) |
 
