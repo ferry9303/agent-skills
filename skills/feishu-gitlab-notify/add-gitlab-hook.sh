@@ -3,8 +3,8 @@
 #   ./add-gitlab-hook.sh <host> <project-id-或-path> <worker-url> <gitlab-webhook-token>
 #
 # 例：
-#   ./add-gitlab-hook.sh 192.168.110.250 ferry/test \
-#       https://wincorp-gitlab-feishu-dev.wincorp2026.workers.dev \
+#   ./add-gitlab-hook.sh gitlab.example.com mygroup/myrepo \
+#       https://<your-relay-worker>.<your-account>.workers.dev \
 #       "$(cat .secrets/gitlab-feishu.token.cred)"
 #
 # token 必须与中继 worker 的 GITLAB_WEBHOOK_TOKEN 一致（GitLab 放进 X-Gitlab-Token 头）。
